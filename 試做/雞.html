@@ -28,7 +28,7 @@
 </style>
 </head>
 <body>
-<div id="hint">點一下會蓬毛</div>
+<div id="hint">點一下會拍翅膀</div>
 <button id="replay">重寫一次</button>
 <div id="ground"></div>
 <div id="ji"><svg viewBox="0 0 1024 1024"><g id="whole"></g></svg></div>
@@ -66,8 +66,11 @@ function pickNext() {
   else { st.mode = 'idle'; st.timer = rand(0.8, 2); }
 }
 
-// 蓬毛：只有「隹」的橫筆（羽毛）和上面兩點往外蓬，字的骨架不動
-const FEATHERS = [1, 2, 13, 14, 15, 17];
+// 點一下：「隹」的橫筆（羽毛）往外蓬，翅膀拍幾下，字的骨架不動
+const FEATHERS = [13, 14, 15, 17];
+const HEAD = [0, 1, 2, 3];
+const WING = [10, 11, 12, 13, 14, 15, 16, 17];
+const WING_LIFT = -90, WING_PIVOT = [560, 430];   // 翅膀抬高多少、繞哪裡拍
 function burst() {
   FEATHERS.forEach(i => {
     const s = strokes[i];
@@ -109,20 +112,23 @@ function tick(now) {
   }
   if (st.mode !== 'peck' && st.mode !== 'hop') st.tilt *= Math.pow(0.02, dt);
 
-  // 身體部位：「大」的撇和點當兩條腳，「隹」的上半當頭，走路時頭一伸一縮
-  const pose = strokes.map(() => ({ x: 0, a: 0 }));
+  // 身體部位：「大」的撇和點當兩條腳（只有腳著地）；
+  // 「隹」整塊當翅膀，抬離地面，繞著靠身體那邊的接點拍；上面的「爫」當頭冠，走路一點一點
+  const pose = strokes.map(() => ({ x: 0, y: 0, a: 0 }));
+  let wing = 0;
   if (st.mode === 'hop') {
     const leg = Math.sin(hopPhase) * 14;
-    pose[8].a = leg; pose[9].a = -leg; pose[11].a = -leg * 0.35;
-    const neck = Math.cos(hopPhase) * 34;
-    [10, 12].forEach(i => pose[i].x = neck);
-    [13, 14, 15, 16].forEach(i => pose[i].x = neck * 0.5);
+    pose[8].a = leg; pose[9].a = -leg;
+    const nod = Math.cos(hopPhase) * 26;
+    HEAD.forEach(i => pose[i].x = nod);
+    wing = -4 + Math.sin(hopPhase * 2) * 4;
   } else if (st.mode === 'peck') {
     const k = Math.max(0, Math.sin(now / 90));
-    [10, 12].forEach(i => pose[i].x = k * 40);
+    HEAD.forEach(i => { pose[i].x = k * 30; pose[i].y = k * 30; });
   }
-  // 蓬毛時羽毛抖一抖
+  // 點一下：翅膀用力拍幾下，羽毛抖一抖
   st.puff *= Math.pow(0.15, dt);
+  wing += -Math.abs(Math.sin(now / 55)) * 28 * st.puff;
   FEATHERS.forEach(i => pose[i].a += Math.sin(now / 35 + i) * 6 * st.puff);
 
   // 每一筆像彈簧一樣被拉回原位
@@ -133,7 +139,8 @@ function tick(now) {
     s.x += s.vx * dt; s.y += s.vy * dt; s.a += s.va * dt;
     const sc = s.show;
     s.g.setAttribute('transform',
-      `translate(${s.x + pose[i].x} ${s.y}) rotate(${s.a + pose[i].a} ${s.px} ${s.py}) translate(${s.cx} ${s.cy}) scale(${sc}) translate(${-s.cx} ${-s.cy})`);
+      (WING.includes(i) ? `translate(0 ${WING_LIFT}) rotate(${wing} ${WING_PIVOT[0]} ${WING_PIVOT[1]}) ` : '') +
+      `translate(${s.x + pose[i].x} ${s.y + pose[i].y}) rotate(${s.a + pose[i].a} ${s.px} ${s.py}) translate(${s.cx} ${s.cy}) scale(${sc}) translate(${-s.cx} ${-s.cy})`);
     s.g.style.opacity = sc;
   });
 
