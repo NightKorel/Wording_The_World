@@ -3,7 +3,7 @@
 筆畫資料：Make Me a Hanzi（https://github.com/skishore/makemeahanzi）的 graphics.txt
 - 來源是文鼎科技的 PL 字型（文鼎PL中楷等），授權是「文鼎公眾授權書」（Arphic Public License）。
 - 授權書原文：ARPHICPL.TXT（英文）、ARPHICPL_zh_TW.TXT（中文）。規定不能修改這兩個檔案。
-- 用到的地方：試做/雞.html（「雞」字的筆畫，原樣照搬，沒有修改筆畫形狀）。
+- 用到的地方：試做/雞.html（「雞」字的筆畫，原樣照搬，沒有修改筆畫形狀）；試做/手寫風.html（只用每一筆的骨架線 medians，原樣照搬，筆畫樣子是自己畫的）。
 - 授權重點（白話）：
   1. 可以免費用、可以散布，商用也沒有禁止。
   2. 散布時要附上授權書原文（就是這個資料夾）。
