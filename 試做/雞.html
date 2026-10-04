@@ -95,7 +95,7 @@ function tick(now) {
     hopPhase += dt * 7;
     bob = Math.abs(Math.sin(hopPhase)) * 14;
     st.x += st.dir * 55 * dt;
-    st.tilt = st.dir * 6;
+    st.tilt = -6;   // 往頭那邊前傾（下面的角度都以「頭朝左」來算，往右走時整隻鏡像翻過來）
     const max = innerWidth - SIZE;
     if (st.x < 0) { st.x = 0; st.dir = 1; }
     if (st.x > max) { st.x = max; st.dir = -1; }
@@ -103,7 +103,7 @@ function tick(now) {
   } else if (st.mode === 'peck') {
     // 啄地上
     const k = Math.max(0, Math.sin(now / 90));
-    st.tilt = st.dir * (8 + k * 28);
+    st.tilt = -(8 + k * 28);   // 頭那邊往下啄
     if ((st.timer -= dt) <= 0) pickNext();
   } else if (st.mode === 'idle') {
     st.tilt *= 0.9;
@@ -124,7 +124,7 @@ function tick(now) {
     wing = -4 + Math.sin(hopPhase * 2) * 4;
   } else if (st.mode === 'peck') {
     const k = Math.max(0, Math.sin(now / 90));
-    HEAD.forEach(i => { pose[i].x = k * 30; pose[i].y = k * 30; });
+    HEAD.forEach(i => { pose[i].x = -k * 40; pose[i].y = k * 40; });
   }
   // 點一下：翅膀用力拍幾下，羽毛抖一抖
   st.puff *= Math.pow(0.15, dt);
@@ -147,7 +147,9 @@ function tick(now) {
   st.squash *= Math.pow(0.002, dt);
   st.y = floorY();
   ji.style.transformOrigin = '50% 100%';
-  ji.style.transform = `translate(${st.x}px, ${st.y - bob}px) rotate(${st.tilt}deg) scale(${1 + st.squash}, ${1 - st.squash})`;
+  // 「雞」的頭（爫）在左邊，所以本來就是面朝左；往右走時左右翻過來，才不會倒著走
+  const face = st.dir > 0 ? -1 : 1;
+  ji.style.transform = `translate(${st.x}px, ${st.y - bob}px) rotate(${st.tilt * face}deg) scale(${(1 + st.squash) * face}, ${1 - st.squash})`;
   requestAnimationFrame(tick);
 }
 
