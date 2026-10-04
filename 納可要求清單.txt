@@ -7,4 +7,5 @@
 - 決定這個遊戲要做什麼。
 
 【已完成】
+✗ 2026-10-04 Wording_The_World 和 Cooking_Mummy 分家：做菜內容搬去 Cooking_Mummy，Wording_The_World 改回自己的名字。
 ✗ 2026-10-04 從另外兩個專案搬需要的規則過來。
