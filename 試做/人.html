@@ -29,15 +29,9 @@
   #body {
     position: absolute; inset: 0; transform-origin: 50% 100%;
   }
-  /* 「人」拆成左半（撇）跟右半（捺）兩片，各自晃，看起來像兩條腿 */
-  .half {
-    position: absolute; inset: 0;
-    font-size: 64px; line-height: 64px; text-align: center;
-    transform-origin: 50% 22%;
-  }
-  .left  { clip-path: inset(0 50% 0 0); }
-  .right { clip-path: inset(0 0 0 50%); }
-
+  /* 「人」用兩條筆畫自己畫：撇跟捺各是一條完整的筆畫，繞著交叉點擺，看起來像兩條腿 */
+  #body svg { width: 100%; height: 100%; overflow: visible; }
+  .leg { fill: #2b2622; transform-box: view-box; transform-origin: 31px 21px; }
   #ground {
     position: absolute; left: 0; right: 0; bottom: 0; height: 24px;
     border-top: 1px solid #d8d0c0;
@@ -63,7 +57,10 @@
 <div id="hint">點一下會跳，按住可以拎起來</div>
 <button id="replay">重看開場</button>
 <div id="ground"></div>
-<div id="ren"><div id="body"><div class="half left">人</div><div class="half right">人</div></div></div>
+<div id="ren"><div id="body"><svg viewBox="0 0 64 64">
+  <path class="leg right" d="M30,19 C34,34 44,48 55,53 C58,54 61,54 62,56 C61,58 58,59 55,59 C43,58 33,46 28,24 Z"/>
+  <path class="leg left" d="M28,4 C31,3 35,4 36,7 C36,27 25,47 5,60 C3,61 2,59 4,58 C20,45 28,27 28,4 Z"/>
+</svg></div></div>
 
 <script>
 const ren = document.getElementById('ren');
