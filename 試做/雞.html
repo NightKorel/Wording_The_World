@@ -13,7 +13,8 @@
   }
   #ji { position: absolute; left: 0; top: 0; width: 72px; height: 72px; cursor: pointer; display: block; }
   #ji svg { width: 100%; height: 100%; overflow: visible; }
-  #ji path { fill: #2b2622; }
+  /* 筆畫外面再描一圈圓角的邊，看起來胖一點、圓一點 */
+  #ji path { fill: #2b2622; stroke: #2b2622; stroke-width: 26; stroke-linejoin: round; stroke-linecap: round; }
   #ground { position: absolute; left: 0; right: 0; bottom: 0; height: 24px; border-top: 1px solid #d8d0c0; }
   #hint { position: absolute; left: 0; right: 0; top: 16px; text-align: center; font-size: 14px; color: #a39a8c; }
   @media (max-width: 520px) { #hint { top: 52px; } }
@@ -27,7 +28,7 @@
 </style>
 </head>
 <body>
-<div id="hint">點一下會炸毛</div>
+<div id="hint">點一下會蓬毛</div>
 <button id="replay">重寫一次</button>
 <div id="ground"></div>
 <div id="ji"><svg viewBox="0 0 1024 1024"><g id="whole"></g></svg></div>
@@ -50,10 +51,11 @@ const strokes = DATA.s.map((d, i) => {
   p.setAttribute('transform', 'scale(1,-1) translate(0,-900)');
   g.appendChild(p); whole.appendChild(g);
   const m = DATA.m[i][Math.floor(DATA.m[i].length / 2)];
-  return { g, cx: m[0], cy: 900 - m[1], x: 0, y: 0, a: 0, vx: 0, vy: 0, va: 0, show: 0 };
+  const top = DATA.m[i][0];
+  return { g, cx: m[0], cy: 900 - m[1], px: top[0], py: 900 - top[1], x: 0, y: 0, a: 0, vx: 0, vy: 0, va: 0, show: 0 };
 });
 
-const st = { x: 0, y: 0, vy: 0, mode: 'write', dir: 1, timer: 0, tilt: 0, squash: 0, writeT: 0 };
+const st = { puff: 0, x: 0, y: 0, vy: 0, mode: 'write', dir: 1, timer: 0, tilt: 0, squash: 0, writeT: 0 };
 function floorY() { return innerHeight - GROUND - SIZE; }
 function rand(a, b) { return a + Math.random() * (b - a); }
 
@@ -64,13 +66,15 @@ function pickNext() {
   else { st.mode = 'idle'; st.timer = rand(0.8, 2); }
 }
 
+// 蓬毛：只有「隹」的橫筆（羽毛）和上面兩點往外蓬，字的骨架不動
+const FEATHERS = [1, 2, 13, 14, 15, 17];
 function burst() {
-  strokes.forEach(s => {
-    const ang = Math.atan2(s.cy - 450, s.cx - 512) + rand(-0.5, 0.5);
-    const sp = rand(1500, 2600);
-    s.vx += Math.cos(ang) * sp; s.vy += Math.sin(ang) * sp - 300; s.va += rand(-400, 400);
+  FEATHERS.forEach(i => {
+    const s = strokes[i];
+    const toRight = s.cx > 512 ? 1 : -1;
+    s.vx += toRight * rand(800, 1200); s.vy += rand(-300, 50); s.va += toRight * rand(-120, 120);
   });
-  st.squash = 0.3;
+  st.squash = 0.22; st.puff = 1;
 }
 
 let hopPhase = 0, last = performance.now();
@@ -105,15 +109,31 @@ function tick(now) {
   }
   if (st.mode !== 'peck' && st.mode !== 'hop') st.tilt *= Math.pow(0.02, dt);
 
+  // 身體部位：「大」的撇和點當兩條腳，「隹」的上半當頭，走路時頭一伸一縮
+  const pose = strokes.map(() => ({ x: 0, a: 0 }));
+  if (st.mode === 'hop') {
+    const leg = Math.sin(hopPhase) * 14;
+    pose[8].a = leg; pose[9].a = -leg; pose[11].a = -leg * 0.35;
+    const neck = Math.cos(hopPhase) * 34;
+    [10, 12].forEach(i => pose[i].x = neck);
+    [13, 14, 15, 16].forEach(i => pose[i].x = neck * 0.5);
+  } else if (st.mode === 'peck') {
+    const k = Math.max(0, Math.sin(now / 90));
+    [10, 12].forEach(i => pose[i].x = k * 40);
+  }
+  // 蓬毛時羽毛抖一抖
+  st.puff *= Math.pow(0.15, dt);
+  FEATHERS.forEach(i => pose[i].a += Math.sin(now / 35 + i) * 6 * st.puff);
+
   // 每一筆像彈簧一樣被拉回原位
-  strokes.forEach(s => {
+  strokes.forEach((s, i) => {
     s.vx += -s.x * 120 * dt; s.vy += -s.y * 120 * dt; s.va += -s.a * 120 * dt;
     const damp = Math.pow(0.02, dt);
     s.vx *= damp; s.vy *= damp; s.va *= damp;
     s.x += s.vx * dt; s.y += s.vy * dt; s.a += s.va * dt;
     const sc = s.show;
     s.g.setAttribute('transform',
-      `translate(${s.x} ${s.y}) rotate(${s.a} ${s.cx} ${s.cy}) translate(${s.cx} ${s.cy}) scale(${sc}) translate(${-s.cx} ${-s.cy})`);
+      `translate(${s.x + pose[i].x} ${s.y}) rotate(${s.a + pose[i].a} ${s.px} ${s.py}) translate(${s.cx} ${s.cy}) scale(${sc}) translate(${-s.cx} ${-s.cy})`);
     s.g.style.opacity = sc;
   });
 
