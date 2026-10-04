@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>試做：人</title>
+<style>
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: #f7f4ec; color: #2b2622;
+    font-family: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+    user-select: none; -webkit-user-select: none; touch-action: none;
+  }
+  #intro {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1.2em; font-size: 22px; letter-spacing: 0.15em; pointer-events: none;
+  }
+  #intro div { opacity: 0; transition: opacity 1.4s; }
+  #intro div.show { opacity: 1; }
+  #intro.gone { opacity: 0; transition: opacity 1.2s; }
+
+  #ren {
+    position: absolute; left: 0; top: 0;
+    width: 64px; height: 64px; cursor: grab; display: none;
+    transform-origin: 50% 100%;
+  }
+  #ren.held { cursor: grabbing; }
+  #body {
+    position: absolute; inset: 0; transform-origin: 50% 100%;
+  }
+  /* 「人」拆成左半（撇）跟右半（捺）兩片，各自晃，看起來像兩條腿 */
+  .half {
+    position: absolute; inset: 0;
+    font-size: 64px; line-height: 64px; text-align: center;
+    transform-origin: 50% 22%;
+  }
+  .left  { clip-path: inset(0 50% 0 0); }
+  .right { clip-path: inset(0 0 0 50%); }
+
+  #ground {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 24px;
+    border-top: 1px solid #d8d0c0;
+  }
+  #hint {
+    position: absolute; left: 0; right: 0; top: 16px; text-align: center;
+    font-size: 14px; color: #a39a8c; opacity: 0; transition: opacity 1s;
+  }
+  @media (max-width: 520px) { #hint { top: 52px; } }
+  #replay {
+    position: absolute; right: 16px; top: 12px; font-size: 14px;
+    background: none; border: 1px solid #cfc6b6; color: #8a8174;
+    border-radius: 6px; padding: 4px 10px; cursor: pointer; font-family: inherit;
+  }
+</style>
+</head>
+<body>
+<div id="intro">
+  <div>一開始，這裡只有你</div>
+  <div>而你</div>
+  <div>是一個</div>
+</div>
+<div id="hint">點一下會跳，按住可以拎起來</div>
+<button id="replay">重看開場</button>
+<div id="ground"></div>
+<div id="ren"><div id="body"><div class="half left">人</div><div class="half right">人</div></div></div>
+
+<script>
+const ren = document.getElementById('ren');
+const body = document.getElementById('body');
+const legL = ren.querySelector('.left');
+const legR = ren.querySelector('.right');
+const intro = document.getElementById('intro');
+const hint = document.getElementById('hint');
+const SIZE = 64, GROUND = 24;
+
+const st = {
+  x: 0, y: -SIZE, vx: 0, vy: 0,
+  mode: 'off',        // off 開場中, fall 掉落, walk 走路, idle 發呆, look 東張西望, sit 坐下, held 被拎著
+  dir: 1, timer: 0, phase: 0, squash: 0,
+  speed: 40,
+};
+
+function floorY() { return innerHeight - GROUND - SIZE; }
+function rand(a, b) { return a + Math.random() * (b - a); }
+
+function pickNext() {
+  const r = Math.random();
+  if (r < 0.5) {
+    st.mode = 'walk';
+    st.speed = rand(28, 60);
+    if (Math.random() < 0.35) st.dir *= -1;
+    st.timer = rand(2, 6);
+  } else if (r < 0.75) {
+    st.mode = 'idle'; st.timer = rand(1, 3);
+  } else if (r < 0.9) {
+    st.mode = 'look'; st.timer = rand(1.5, 3);
+  } else {
+    st.mode = 'sit'; st.timer = rand(3, 6);
+  }
+}
+
+function land() {
+  st.y = floorY();
+  if (st.vy > 250) {
+    st.squash = Math.min(0.45, st.vy / 1600);
+    st.vy = -st.vy * 0.28;            // 彈一下
+    if (Math.abs(st.vy) < 90) st.vy = 0;
+  } else st.vy = 0;
+  if (st.vy === 0) { st.mode = 'idle'; st.timer = rand(0.6, 1.2); }
+}
+
+let last = performance.now();
+function tick(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  let legA = 0, tilt = 0, bob = 0;
+
+  if (st.mode === 'fall') {
+    st.vy += 1500 * dt;
+    st.x += st.vx * dt; st.vx *= 0.99;
+    st.y += st.vy * dt;
+    if (st.y >= floorY()) land();
+    legA = Math.sin(now / 60) * 14;      // 掉落時腳亂踢
+  } else if (st.mode === 'walk') {
+    st.x += st.dir * st.speed * dt;
+    st.phase += dt * st.speed / 6;
+    legA = Math.sin(st.phase) * 16;
+    bob = Math.abs(Math.sin(st.phase)) * 3;
+    tilt = st.dir * 4;
+    const max = innerWidth - SIZE;
+    if (st.x < 0) { st.x = 0; st.dir = 1; }
+    if (st.x > max) { st.x = max; st.dir = -1; }
+    if ((st.timer -= dt) <= 0) pickNext();
+  } else if (st.mode === 'idle') {
+    bob = Math.sin(now / 500) * 1;       // 呼吸
+    if ((st.timer -= dt) <= 0) pickNext();
+  } else if (st.mode === 'look') {
+    tilt = Math.sin(now / 350) * 10;     // 左右張望
+    if ((st.timer -= dt) <= 0) pickNext();
+  } else if (st.mode === 'sit') {
+    legA = 34; bob = -10;                // 腳張開往下坐
+    if ((st.timer -= dt) <= 0) pickNext();
+  } else if (st.mode === 'held') {
+    legA = Math.sin(now / 110) * 22;     // 被拎起來腳晃來晃去
+    tilt = Math.sin(now / 230) * 6;
+  }
+
+  if (st.mode !== 'held' && st.mode !== 'fall' && st.mode !== 'off') st.y = floorY();
+  st.squash *= Math.pow(0.0005, dt);
+
+  const sx = 1 + st.squash, sy = 1 - st.squash;
+  ren.style.transform = `translate(${st.x}px, ${st.y - bob}px)`;
+  body.style.transform = `rotate(${tilt}deg) scale(${sx}, ${sy})`;
+  legL.style.transform = `rotate(${legA}deg)`;
+  legR.style.transform = `rotate(${-legA}deg)`;
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+// 點一下跳、按住拎起來
+let drag = null;
+ren.addEventListener('pointerdown', e => {
+  if (st.mode === 'off') return;
+  ren.setPointerCapture(e.pointerId);
+  drag = { sx: e.clientX, sy: e.clientY, ox: e.clientX - st.x, oy: e.clientY - st.y,
+           moved: false, lx: e.clientX, ly: e.clientY, lt: performance.now(), vx: 0, vy: 0 };
+});
+ren.addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (!drag.moved && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 6) {
+    drag.moved = true; st.mode = 'held'; ren.classList.add('held');
+  }
+  if (!drag.moved) return;
+  const t = performance.now(), dtm = Math.max(1, t - drag.lt) / 1000;
+  drag.vx = (e.clientX - drag.lx) / dtm; drag.vy = (e.clientY - drag.ly) / dtm;
+  drag.lx = e.clientX; drag.ly = e.clientY; drag.lt = t;
+  st.x = Math.max(0, Math.min(innerWidth - SIZE, e.clientX - drag.ox));
+  st.y = Math.min(floorY(), e.clientY - drag.oy);
+});
+function release() {
+  if (!drag) return;
+  ren.classList.remove('held');
+  if (drag.moved) {
+    st.mode = 'fall';
+    st.vx = Math.max(-600, Math.min(600, drag.vx * 0.5));
+    st.vy = Math.max(-600, Math.min(600, drag.vy * 0.5));
+  } else if (st.mode !== 'fall') {
+    st.mode = 'fall'; st.vy = -520; st.vx = 0;   // 跳
+  }
+  drag = null;
+}
+ren.addEventListener('pointerup', release);
+ren.addEventListener('pointercancel', release);
+
+// 開場：三行字一句一句出來，然後「人」掉下來
+const lines = intro.querySelectorAll('div');
+let introTimers = [];
+function playIntro() {
+  introTimers.forEach(clearTimeout); introTimers = [];
+  intro.classList.remove('gone');
+  lines.forEach(l => l.classList.remove('show'));
+  hint.style.opacity = 0;
+  ren.style.display = 'none'; st.mode = 'off';
+  lines.forEach((l, i) => introTimers.push(setTimeout(() => l.classList.add('show'), 600 + i * 1600)));
+  introTimers.push(setTimeout(() => {
+    st.x = innerWidth / 2 - SIZE / 2; st.y = -SIZE; st.vx = 0; st.vy = 0;
+    st.dir = Math.random() < 0.5 ? -1 : 1;
+    ren.style.display = 'block'; st.mode = 'fall';
+  }, 600 + 3 * 1600 + 300));
+  introTimers.push(setTimeout(() => intro.classList.add('gone'), 600 + 3 * 1600 + 1600));
+  introTimers.push(setTimeout(() => hint.style.opacity = 1, 600 + 3 * 1600 + 3200));
+}
+document.getElementById('replay').addEventListener('click', playIntro);
+addEventListener('resize', () => { st.x = Math.min(st.x, innerWidth - SIZE); });
+playIntro();
+</script>
+</body>
+</html>
