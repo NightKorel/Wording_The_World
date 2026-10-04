@@ -30,6 +30,7 @@
 <div id="controls">
   粗細 <input id="w" type="range" min="40" max="130" value="88">
   歪歪程度 <input id="j" type="range" min="0" max="40" value="14">
+  <label><input id="sep" type="checkbox" checked> 避免黏住</label>
 </div>
 <div id="grid"></div>
 <div id="credit">筆畫位置資料：<a href="https://github.com/skishore/makemeahanzi" target="_blank">Make Me a Hanzi</a>（來自文鼎 PL 字型，文鼎公眾授權書）</div>
@@ -66,41 +67,83 @@ function profile(pts, W) {
   return t => W * (0.85 + 0.25 * Math.sin(Math.PI * t));
 }
 
-// 一筆變成一個填滿的形狀：沿著骨架兩側往外推，頭尾補圓
-function strokePath(med, W, J, rnd) {
+// 先算出每一筆的骨架點和每一點的粗細
+function prepare(med, W, J, rnd) {
   let pts = med.map(([x, y]) => [x + (rnd() - 0.5) * J, 900 - y + (rnd() - 0.5) * J]);
   pts = smooth(pts);
-  const w = profile(pts, W), n = pts.length, L = [], R = [];
+  const w = profile(pts, W), n = pts.length;
+  return { pts, half: pts.map((_, i) => w(i / (n - 1)) / 2), W };
+}
+
+function segDist(p, a, b) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy || 1;
+  const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2));
+  return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
+}
+function distToStroke(p, s) {
+  let m = Infinity;
+  for (let i = 0; i < s.pts.length - 1; i++) m = Math.min(m, segDist(p, s.pts[i], s.pts[i + 1]));
+  return m;
+}
+
+// 避免黏住：兩筆本來就相交或相接的（像「十」），照樣接在一起；
+// 本來分開、只是靠很近的，就在靠近的那一段把兩筆各自變細，中間留一條縫
+const GAP = 22;
+function unstick(strokes) {
+  strokes.forEach((s, i) => {
+    const cap = s.half.slice();
+    strokes.forEach((o, j) => {
+      if (i === j) return;
+      const ds = s.pts.map(p => distToStroke(p, o));
+      if (Math.min(...ds) < s.W * 0.6) return;                // 骨架靠到這麼近，算本來就接在一起
+      ds.forEach((d, k) => { cap[k] = Math.min(cap[k], Math.max(s.W * 0.16, d / 2 - GAP / 2)); });
+    });
+    // 讓變細的地方慢慢收，不要突然一個凹口
+    s.half = cap.map((_, k) => {
+      let m = Infinity;
+      for (let q = -3; q <= 3; q++) { const c = cap[k + q]; if (c !== undefined) m = Math.min(m, c + Math.abs(q) * 6); }
+      return Math.min(s.half[k], m);
+    });
+  });
+}
+
+// 一筆變成一個填滿的形狀：沿著骨架兩側往外推，頭尾補圓
+function strokePath(s) {
+  const { pts, half } = s, n = pts.length, L = [], R = [];
   for (let i = 0; i < n; i++) {
     const p = pts[i], q = pts[Math.min(n - 1, i + 1)], o = pts[Math.max(0, i - 1)];
     let nx = -(q[1] - o[1]), ny = q[0] - o[0]; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
-    const h = w(i / (n - 1)) / 2;
+    const h = half[i];
     L.push([p[0] + nx * h, p[1] + ny * h]); R.push([p[0] - nx * h, p[1] - ny * h]);
   }
-  const r0 = w(0) / 2, r1 = w(1) / 2, s = pts[0], e = pts[n - 1];
+  const r0 = half[0], r1 = half[n - 1], st = pts[0], e = pts[n - 1];
   const f = v => v.map(c => c.toFixed(1)).join(' ');
   return 'M' + f(L[0]) + L.slice(1).map(p => 'L' + f(p)).join('') +
     `A${r1} ${r1} 0 0 1 ${f(R[n - 1])}` + R.slice(0, -1).reverse().map(p => 'L' + f(p)).join('') +
     `A${r0} ${r0} 0 0 1 ${f(L[0])}Z` +
     // 頭尾各補一顆圓，接縫才不會尖尖的
-    `M${s[0] - r0} ${s[1]}a${r0} ${r0} 0 1 0 ${2 * r0} 0a${r0} ${r0} 0 1 0 ${-2 * r0} 0Z` +
+    `M${st[0] - r0} ${st[1]}a${r0} ${r0} 0 1 0 ${2 * r0} 0a${r0} ${r0} 0 1 0 ${-2 * r0} 0Z` +
     `M${e[0] - r1} ${e[1]}a${r1} ${r1} 0 1 0 ${2 * r1} 0a${r1} ${r1} 0 1 0 ${-2 * r1} 0Z`;
 }
 
 function render() {
   const W = +document.getElementById('w').value, J = +document.getElementById('j').value;
+  const sep = document.getElementById('sep').checked;
   const grid = document.getElementById('grid'); grid.innerHTML = '';
   Object.entries(MED).forEach(([ch, meds], ci) => {
     const rnd = seeded(ci * 31 + 7);
     // 筆畫多的字自動畫細一點，才不會糊成一團
     const Wc = W * Math.max(0.65, 1.1 - 0.022 * meds.length);
-    const paths = meds.map(m => `<path d="${strokePath(m, Wc, J, rnd)}"/>`).join('');
+    const strokes = meds.map(m => prepare(m, Wc, J, rnd));
+    if (sep) unstick(strokes);
+    const paths = strokes.map(s => `<path d="${strokePath(s)}"/>`).join('');
     const cell = document.createElement('div'); cell.className = 'cell';
     cell.innerHTML = `<div class="pair"><svg viewBox="0 0 1024 1024"><g class="wob" style="animation-delay:-${ci * 0.37}s">${paths}</g></svg>
       <div class="font">${ch}</div></div><div class="label">${ch}</div>`;
     grid.appendChild(cell);
   });
 }
+document.getElementById('sep').addEventListener('change', render);
 document.getElementById('w').addEventListener('input', render);
 document.getElementById('j').addEventListener('input', render);
 render();
