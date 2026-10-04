@@ -29,7 +29,7 @@
 </head>
 <body>
 <div id="hint">點一下會拍翅膀</div>
-<button id="replay">重寫一次</button>
+<button id="replay">重新出現</button>
 <div id="ground"></div>
 <div id="ji"><svg viewBox="0 0 1024 1024"><g id="whole"></g></svg></div>
 <div id="credit">筆畫資料：<a href="https://github.com/skishore/makemeahanzi" target="_blank">Make Me a Hanzi</a>（來自文鼎 PL 字型，文鼎公眾授權書）</div>
@@ -86,10 +86,12 @@ function tick(now) {
   let bob = 0;
 
   if (st.mode === 'write') {
-    // 照筆順一筆一筆寫出來
+    // 整個字一起冒出來，彈一下
     st.writeT += dt;
-    strokes.forEach((s, i) => { s.show = Math.max(0, Math.min(1, (st.writeT - i * 0.12) / 0.25)); });
-    if (st.writeT > strokes.length * 0.12 + 0.6) { st.mode = 'idle'; st.timer = 0.8; }
+    const t = Math.min(1, st.writeT / 0.35);
+    const pop = t < 1 ? Math.sin(t * Math.PI * 0.75) / Math.sin(Math.PI * 0.75) : 1;
+    strokes.forEach(s => { s.show = pop; });
+    if (st.writeT > 0.8) { st.mode = 'idle'; st.timer = 0.6; }
   } else if (st.mode === 'hop') {
     // 雞走路一跳一跳
     hopPhase += dt * 7;
