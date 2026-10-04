@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>蠍子試做</title>
+<style>
+  :root { --sand:#f3dfb1; --ink:#5a3b1c; }
+  body { margin:0; background:var(--sand); font-family:sans-serif; color:var(--ink);
+         display:flex; flex-direction:column; align-items:center; min-height:100vh; overflow-x:hidden; }
+  #hint { font-size:15px; padding:14px 16px 0; text-align:center; line-height:1.6; }
+  #stage { width:100%; max-width:640px; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+  svg { width:100%; height:auto; display:block; }
+  #msg { font-size:22px; min-height:32px; margin-top:4px; font-weight:bold; text-align:center; padding:0 16px; }
+  #score { font-size:15px; margin-top:6px; opacity:.85; }
+  .shake { animation:shake .35s; }
+  @keyframes shake { 0%,100%{transform:translate(0)} 20%{transform:translate(-9px,4px)} 40%{transform:translate(8px,-5px)} 60%{transform:translate(-6px,3px)} 80%{transform:translate(4px,-2px)} }
+</style>
+</head>
+<body>
+<div id="hint">蠍子舉起尾巴的時候別碰牠。<br>尾巴放下來時點牠，就抓得到。</div>
+<div id="stage">
+  <svg id="svg" viewBox="0 0 600 330">
+    <rect x="0" y="250" width="600" height="80" fill="#e8cd93"/>
+    <ellipse id="shadow" cx="300" cy="262" rx="120" ry="10" fill="#c9a96a" opacity=".55"/>
+    <g id="sc"></g>
+  </svg>
+</div>
+<div id="msg"></div>
+<div id="score">抓到 0 隻．被夾 0 次</div>
+
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+const C = { body:'#b8641e', dark:'#8a4512', light:'#d98a3f', far:'#94501a' };
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const sc = document.getElementById('sc');
+const root = el('g', {}, sc);   // 翻面用
+
+// 一隻鉗子：手臂＋手掌＋會動的指頭
+function makeClaw(x, y, color, parent) {
+  const base = el('g', {}, parent);
+  const arm = el('g', {}, base);
+  el('path', { d:'M0 0 L20 0', stroke:color, 'stroke-width':9, 'stroke-linecap':'round' }, arm);
+  const fore = el('g', {}, arm);
+  el('path', { d:'M0 0 L16 0', stroke:color, 'stroke-width':10, 'stroke-linecap':'round' }, fore);
+  const hand = el('g', {}, fore);
+  el('ellipse', { cx:14, cy:0, rx:18, ry:13, fill:color }, hand);
+  el('path', { d:'M26 5 Q40 8 44 0', stroke:color, 'stroke-width':8, fill:'none', 'stroke-linecap':'round' }, hand);
+  const finger = el('g', {}, hand);
+  el('path', { d:'M0 0 Q12 -8 18 0', stroke:color, 'stroke-width':8, fill:'none', 'stroke-linecap':'round' }, finger);
+  return { base, arm, fore, hand, finger, x, y };
+}
+// 一隻腳：兩節
+function makeLeg(x, y, color, parent) {
+  const g = el('g', {}, parent);
+  el('path', { d:'M0 0 L0 22', stroke:color, 'stroke-width':5, 'stroke-linecap':'round' }, g);
+  const low = el('g', {}, g);
+  el('path', { d:'M0 0 L0 24', stroke:color, 'stroke-width':4, 'stroke-linecap':'round' }, low);
+  return { g, low, x, y };
+}
+
+// 後面那排（遠的）腳和鉗子先畫，顏色深一點
+const farLegs = [-38, -14, 10, 34].map(x => makeLeg(x + 4, 4, C.far, root));
+const farClaw = makeClaw(-74, -6, C.far, root);
+
+// 尾巴：一節一節串起來，轉第一節後面全部跟著動
+const tailRoot = el('g', {}, root);
+const tail = [];
+let parent = tailRoot;
+const segLen = [24, 22, 21, 20, 19];
+segLen.forEach((L, i) => {
+  const joint = el('g', {}, parent);
+  el('ellipse', { cx:L/2, cy:0, rx:L/2 + 4, ry:10 - i * 0.8, fill: i % 2 ? C.body : C.light }, joint);
+  tail.push({ joint, L });
+  const next = el('g', {}, joint);
+  next.setAttribute('transform', `translate(${L},0)`);
+  parent = next;
+});
+const stinger = el('g', {}, parent);
+el('ellipse', { cx:9, cy:0, rx:11, ry:8, fill:C.dark }, stinger);
+el('path', { d:'M18 -2 Q30 2 26 14', stroke:'#3a220c', 'stroke-width':4, fill:'none', 'stroke-linecap':'round' }, stinger);
+
+// 身體
+[[40, 0, 22, 19], [16, 0, 22, 21], [-8, 0, 21, 21], [-34, 2, 20, 19]].forEach(([cx, cy, rx, ry], i) => {
+  el('ellipse', { cx, cy, rx, ry, fill: i % 2 ? C.body : C.light }, root);
+});
+el('ellipse', { cx:-58, cy:2, rx:26, ry:18, fill:C.body }, root);
+// 眼睛
+el('circle', { cx:-66, cy:-8, r:7, fill:'#fff' }, root);
+el('circle', { cx:-50, cy:-10, r:6, fill:'#fff' }, root);
+const pupils = [el('circle', { cx:-67, cy:-8, r:3.5, fill:'#2a1606' }, root), el('circle', { cx:-51, cy:-10, r:3, fill:'#2a1606' }, root)];
+const nearLegs = [-40, -16, 8, 32].map(x => makeLeg(x, 12, C.dark, root));
+const nearClaw = makeClaw(-72, 6, C.dark, root);
+
+// ---- 動起來 ----
+let posX = 300, dir = -1, speed = 0.9;   // dir = -1 往左走（臉朝左）
+let state = 'walk';            // walk 走路、raise 舉尾巴警告、strike 夾人、caught 被抓
+let stateT = 0, nextRaise = 1.8 + Math.random() * 2;
+let raise = 0;                 // 0 放下 → 1 舉起
+let caught = 0, pinched = 0;
+const msg = document.getElementById('msg'), score = document.getElementById('score');
+
+function lerp(a, b, k) { return a + (b - a) * k; }
+function setClaw(c, open, reach, t, phase) {
+  c.base.setAttribute('transform', `translate(${c.x},${c.y})`);
+  c.arm.setAttribute('transform', `rotate(${188 + reach * -8 + Math.sin(t * 2 + phase) * 4})`);
+  c.fore.setAttribute('transform', `translate(20,0) rotate(${38 - reach * 20})`);
+  c.hand.setAttribute('transform', `translate(16,0) rotate(${-12})`);
+  c.finger.setAttribute('transform', `translate(26,-5) rotate(${-open})`);
+}
+
+let last = performance.now(), t = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now; t += dt; stateT += dt;
+
+  let walking = state === 'walk';
+  if (state === 'walk') {
+    raise = Math.max(0, raise - dt * 3);
+    posX += dir * speed * 60 * dt;
+    if (posX < 220) dir = 1;
+    if (posX > 380) dir = -1;
+    if (stateT > nextRaise) { state = 'raise'; stateT = 0; }
+  } else if (state === 'raise') {
+    raise = Math.min(1, raise + dt * 4);
+    if (stateT > 1.4) { state = 'walk'; stateT = 0; nextRaise = 1.2 + Math.random() * 2.5; }
+  } else if (state === 'strike') {
+    raise = 1;
+    if (stateT > 0.7) { state = 'walk'; stateT = 0; nextRaise = 1.5 + Math.random() * 2; }
+  } else if (state === 'caught') {
+    if (stateT > 1.2) { state = 'walk'; stateT = 0; posX = Math.random() < .5 ? 230 : 370; nextRaise = 2; sc.style.opacity = 1; }
+  }
+
+  // 尾巴：放下時低低地晃，舉起時捲到頭頂上方，夾人時往前甩
+  const sway = Math.sin(t * 3) * 4;
+  let baseA = lerp(-8, -72, raise) + sway;
+  let curl = lerp(-6, -30, raise);
+  if (state === 'strike') {
+    const k = stateT < 0.15 ? stateT / 0.15 : Math.max(0, 1 - (stateT - 0.15) / 0.5);
+    baseA += k * -28; curl += k * 12;
+  }
+  if (state === 'raise') { baseA += Math.sin(t * 22) * 2; }   // 舉起來時尾巴抖
+  tailRoot.setAttribute('transform', `translate(56,-6) rotate(${baseA})`);
+  tail.forEach((s, i) => s.joint.setAttribute('transform', `rotate(${i === 0 ? 0 : curl + Math.sin(t * 3 - i * 0.6) * 3})`));
+  stinger.setAttribute('transform', `rotate(${curl * 0.8})`);
+
+  // 鉗子：走路時一開一合，夾人時用力夾
+  let open = 18 + Math.sin(t * 5) * 12, reach = 0;
+  if (state === 'raise') open = 35 + Math.sin(t * 14) * 5;
+  if (state === 'strike') { const k = Math.min(1, stateT / 0.12); open = lerp(40, 0, k); reach = Math.max(0, 1 - stateT / 0.6); }
+  setClaw(nearClaw, open, reach, t, 0);
+  setClaw(farClaw, open * 0.9, reach, t, 1.3);
+
+  // 腳：輪流划動
+  const legSpeed = walking ? 14 : 3;
+  [nearLegs, farLegs].forEach((legs, side) => legs.forEach((L, i) => {
+    const ph = t * legSpeed + i * 1.6 + side * Math.PI;
+    const a = (i < 2 ? 25 : -25) + Math.sin(ph) * (walking ? 18 : 3);
+    L.g.setAttribute('transform', `translate(${L.x},${L.y}) rotate(${a})`);
+    L.low.setAttribute('transform', `translate(0,22) rotate(${(i < 2 ? 30 : -30)})`);
+  }));
+
+  // 眼睛看著走的方向，偶爾眨眼
+  const blink = (t % 3.3) < 0.12 ? 0.2 : 1;
+  pupils.forEach(p => p.setAttribute('transform', `translate(${-2},0)`));
+  pupils.forEach(p => p.setAttribute('r', (p === pupils[0] ? 3.5 : 3) * blink));
+
+  const bob = walking ? Math.sin(t * 14) * 1.5 : 0;
+  sc.setAttribute('transform', `translate(${posX},${214 + bob}) scale(${-dir * 1.3},1.3)`);
+  document.getElementById('shadow').setAttribute('cx', posX);
+  requestAnimationFrame(frame);
+}
+window.__dbg = (s, r) => { state = s; stateT = 0; raise = r; };
+requestAnimationFrame(frame);
+
+// ---- 點蠍子 ----
+document.getElementById('stage').addEventListener('pointerdown', e => {
+  if (state === 'caught' || state === 'strike') return;
+  const pt = document.getElementById('svg').createSVGPoint();
+  pt.x = e.clientX; pt.y = e.clientY;
+  const p = pt.matrixTransform(document.getElementById('svg').getScreenCTM().inverse());
+  if (Math.abs(p.x - posX) > 150 || p.y < 90 || p.y > 300) return;   // 沒點到蠍子
+  if (raise > 0.35) {
+    state = 'strike'; stateT = 0; pinched++;
+    msg.textContent = '喀啦……不要碎掉啊啊啊！！';
+    const body = document.body; body.classList.remove('shake'); void body.offsetWidth; body.classList.add('shake');
+  } else {
+    state = 'caught'; stateT = 0; caught++;
+    msg.textContent = '抓到了！先把毒針拔掉……';
+    sc.style.opacity = 0.35;
+  }
+  score.textContent = `抓到 ${caught} 隻．被夾 ${pinched} 次`;
+});
+</script>
+</body>
+</html>
