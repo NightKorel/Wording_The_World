@@ -31,3 +31,26 @@ Claude 提過、納可沒點頭的：
   - 熱帶雨林落葉爛得快，地上的土薄，養分大多在活的植物身上；寒帶針葉林爛得慢，地上厚厚一層針葉和苔蘚；溫帶落葉林積成一層又黑又鬆的土。
   - 狐狸、獾會在大樹根底下挖窩，獾的洞常被狐狸佔去住；熊會在樹根或倒木底下冬眠。這些洞大多很小，人待不進去。
   - 樹皮從外到裡：外樹皮（死的）、韌皮部（活的，送糖，能吃的是這層）、形成層、木質部（木頭，人吃不了）。松樹、樺樹的內皮有人在饑荒時吃。繞樹幹刮掉完整一圈樹皮，樹會死（環狀剝皮）。
+
+【2026-11-13 野草莓的資料（納可說「野莓好像可以」，要 Claude 找可靠資料）】
+查的是森林草莓（Fragaria vesca）和維吉尼亞草莓（Fragaria virginiana）。
+
+- 多年生的矮草本，冬天落葉，有些葉子會留過冬。從很短的地下莖長出一叢。〔FEIS〕
+- 主要靠走莖（貼地爬的細莖）繁殖，種子也行但比較少。一叢一季長 1 到 4 條走莖，走莖上的節最遠在離母株 1 公尺的地方生根變成新的一叢。走莖冬天會爛掉，到春天新舊兩叢多半已經斷開。〔FEIS〕
+- 把生了根的小株分下來種，是有效的繁殖方法，春天或初夏做。〔Wildflower Center〕
+- 果實很小，最粗大約 1 公分，表面一粒一粒的才是真正的種子。夏天結果。〔FEIS、密蘇里植物園〕
+- 種子大概是鳥和哺乳類吃了果子帶走的。種子留在很淺的地方：愛達荷一份研究裡 95% 活的種子在最上面 5 公分，多半在落葉層裡。種子要在潮濕、半遮陰的裸土上才發芽。〔FEIS〕
+- 光：資料說法不一致。有人說不耐陰；有人說比多數先鋒草本耐陰，在稀疏的樹或高灌木底下長得最滿。明尼蘇達大學說森林草莓耐得住比較陰的地方。〔FEIS、UMN〕
+- 林子越老越密，它越少：蒙大拿的冷杉林裡，90 年以下的林子有 67% 找得到它，150 年以上的只有 7%。樹被砍掉、疏伐之後它會變多。常見在林間空地、路邊、草地。〔FEIS〕
+- 水：適應範圍寬，但太濕太乾大概都不行。土要排水好、有腐植質、肥。〔FEIS、密蘇里植物園、NC State〕
+- 維吉尼亞草莓喜歡涼，春秋長得最好，怕夏天的高溫悶熱和乾風。〔密蘇里植物園〕
+- 誰吃它：鹿、麋鹿、山羊吃（適口性中等）；灰熊、黑熊、浣熊吃；松雞和鳴禽吃果子。在明尼蘇達它可能是披肩松雞最重要的草本食物。〔FEIS〕
+- 沒查到的：根有多深、一叢能活幾年、遮陰下會不會少開花結果。Claude 之前講的「根很淺」沒有找到數字佐證。
+
+出處：
+- FEIS：美國林務署 Fire Effects Information System，Fragaria vesca 條目 https://research.fs.usda.gov/feis/species-reviews/fraves （頁面很長，最後一小段沒讀到）
+- 密蘇里植物園 Plant Finder：https://missouribotanicalgarden.org/PlantFinder/PlantFinderDetails.aspx?kempercode=b346 、http://www.missouribotanicalgarden.org/plantfinder/PlantFinderDetails.aspx?taxonid=291715
+- NC State Extension：https://plants.ces.ncsu.edu/plants/fragaria-virginiana/
+- 明尼蘇達大學 Extension（UMN）：https://extension.umn.edu/fruit/growing-strawberries-home-garden
+- Lady Bird Johnson Wildflower Center（德州大學）：https://www.wildflower.org/plants/result.php?id_plant=frvi
+- 這些都是北美的資料。密蘇里植物園、NC State、UMN、Wildflower Center 的內容是從搜尋結果的摘要讀的，沒有逐頁打開。
